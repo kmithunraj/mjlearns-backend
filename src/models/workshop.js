@@ -7,6 +7,7 @@ module.exports = (sequelize, DataTypes) => {
       price: { type: DataTypes.DECIMAL(10, 2), allowNull: false },
       date: { type: DataTypes.DATE, allowNull: false },
       capacity: { type: DataTypes.INTEGER, allowNull: false },
+      instructor: { type: DataTypes.STRING, allowNull: true },
     },
     {
       tableName: "workshops",

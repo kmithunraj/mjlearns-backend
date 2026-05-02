@@ -9,7 +9,20 @@ const env = process.env.NODE_ENV || "development";
 const config = require(path.resolve("config", "config.js"))[env];
 const db = {};
 
-const sequelize = new Sequelize(config.database, config.username, config.password, config);
+let sequelize;
+if (config.use_env_variable) {
+  const dbUrl = process.env[config.use_env_variable];
+  if (!dbUrl) {
+    throw new Error(`Missing environment variable ${config.use_env_variable}`);
+  }
+  sequelize = new Sequelize(dbUrl, {
+    dialect: config.dialect,
+    logging: config.logging,
+    dialectOptions: config.dialectOptions,
+  });
+} else {
+  sequelize = new Sequelize(config.database, config.username, config.password, config);
+}
 
 fs.readdirSync(__dirname)
   .filter((file) => file.indexOf(".") !== 0 && file !== basename && file.slice(-3) === ".js")
