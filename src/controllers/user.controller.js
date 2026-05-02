@@ -11,7 +11,7 @@ const getCoursesController = asyncHandler(async (req, res) => {
 });
 
 const getWorkshopsController = asyncHandler(async (req, res) => {
-  const workshops = await listWorkshops();
+  const workshops = await listWorkshops(req.user?.id ?? null);
   res.status(200).json(workshops);
 });
 

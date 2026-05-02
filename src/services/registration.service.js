@@ -1,9 +1,32 @@
+const { Op } = require("sequelize");
 const { Course, Workshop, Registration } = require("../models");
 const ApiError = require("../utils/apiError");
 
 const listCourses = async () => Course.findAll({ order: [["createdAt", "DESC"]] });
 
-const listWorkshops = async () => Workshop.findAll({ order: [["createdAt", "DESC"]] });
+const listWorkshops = async (userId) => {
+  const rows = await Workshop.findAll({ order: [["createdAt", "DESC"]] });
+  let registeredWorkshopIds = new Set();
+  if (userId) {
+    const regs = await Registration.findAll({
+      where: {
+        userId,
+        workshopId: { [Op.ne]: null },
+        paymentStatus: { [Op.in]: ["pending", "paid"] },
+      },
+      attributes: ["workshopId"],
+      raw: true,
+    });
+    registeredWorkshopIds = new Set(regs.map((r) => r.workshopId).filter(Boolean));
+  }
+  return rows.map((w) => {
+    const plain = w.get({ plain: true });
+    return {
+      ...plain,
+      registered: Boolean(userId && registeredWorkshopIds.has(plain.id)),
+    };
+  });
+};
 
 const getRegistrationAmount = async (registration) => {
   if (registration.courseId) {
