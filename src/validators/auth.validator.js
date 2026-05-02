@@ -1,12 +1,15 @@
 const Joi = require("joi");
 
-const sendOtpSchema = Joi.object({
+const passwordSchema = Joi.string().min(8).max(128).required();
+
+const registerSchema = Joi.object({
   email: Joi.string().email().required(),
+  password: passwordSchema,
 });
 
-const verifyOtpSchema = Joi.object({
+const loginSchema = Joi.object({
   email: Joi.string().email().required(),
-  otp: Joi.string().length(6).pattern(/^\d+$/).required(),
+  password: Joi.string().required(),
 });
 
-module.exports = { sendOtpSchema, verifyOtpSchema };
+module.exports = { registerSchema, loginSchema };

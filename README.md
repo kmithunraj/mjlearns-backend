@@ -1,16 +1,16 @@
 # Workshops and Courses Backend
 
-Production-style backend built with Express, PostgreSQL, and Sequelize for OTP-based auth, course/workshop registration, and Razorpay payments.
+Production-style backend built with Express, PostgreSQL, and Sequelize for email/password auth, course/workshop registration, and Razorpay payments.
 
 ## Tech Stack
 
 - Node.js + Express
 - PostgreSQL + Sequelize ORM (migrations only, no `sync()`)
 - Razorpay payment integration
-- Nodemailer for email OTP
+- bcrypt password hashing
 - JWT authentication
 - Joi request validation
-- Rate limiting (`express-rate-limit`) for OTP endpoints
+- Rate limiting (`express-rate-limit`) on auth routes
 
 ## Project Structure
 
@@ -37,19 +37,17 @@ Production-style backend built with Express, PostgreSQL, and Sequelize for OTP-b
 
 Base URL: `http://localhost:4000/api`
 
-## Authentication Flow (Passwordless)
+## Authentication Flow
 
-1. `POST /auth/send-otp` with email
-2. OTP emailed and stored in DB with expiry
-3. `POST /auth/verify-otp` with email + OTP
-4. User is created if new, then JWT is returned
+1. `POST /auth/register` with `email` + `password` (min 8 chars) — creates user, returns JWT.
+2. `POST /auth/login` with `email` + `password` — returns JWT.
+3. If a user row existed from the old OTP flow with no password yet, the first successful `register` with that email sets the password and signs them in.
 
 ## API Endpoints
 
 ### Auth
-- `POST /auth/send-otp`
-- `POST /auth/resend-otp`
-- `POST /auth/verify-otp`
+- `POST /auth/register`
+- `POST /auth/login`
 
 ### User
 - `GET /courses`

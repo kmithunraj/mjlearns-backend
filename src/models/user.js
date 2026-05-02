@@ -8,6 +8,10 @@ module.exports = (sequelize, DataTypes) => {
         unique: true,
         validate: { isEmail: true },
       },
+      passwordHash: {
+        type: DataTypes.STRING,
+        allowNull: true,
+      },
       role: {
         type: DataTypes.ENUM("user", "admin"),
         allowNull: false,
@@ -17,6 +21,9 @@ module.exports = (sequelize, DataTypes) => {
     {
       tableName: "users",
       timestamps: true,
+      defaultScope: {
+        attributes: { exclude: ["passwordHash"] },
+      },
     }
   );
 

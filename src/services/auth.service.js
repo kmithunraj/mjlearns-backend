@@ -1,49 +1,50 @@
-const { Op } = require("sequelize");
-const transporter = require("../config/mailer");
-const { OTP, User } = require("../models");
+const bcrypt = require("bcrypt");
+const { User } = require("../models");
 const { signJwt } = require("../utils/jwt");
-const { generateOtp } = require("../utils/otp");
 const ApiError = require("../utils/apiError");
 
-const OTP_TTL_MINUTES = Number(process.env.OTP_TTL_MINUTES || 10);
+const SALT_ROUNDS = 10;
 
-const sendOtp = async (email) => {
-  const otp = generateOtp();
-  const expiresAt = new Date(Date.now() + OTP_TTL_MINUTES * 60 * 1000);
+const toPublicUser = (user) => ({
+  id: user.id,
+  email: user.email,
+  role: user.role,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+});
 
-  await OTP.create({ email, otp, expiresAt });
-
-  await transporter.sendMail({
-    from: process.env.MAIL_FROM,
-    to: email,
-    subject: "Your OTP Code",
-    text: `Your OTP is ${otp}. It expires in ${OTP_TTL_MINUTES} minutes.`,
-  });
+const issueSession = (user) => {
+  const token = signJwt({ userId: user.id, role: user.role });
+  return { token, user: toPublicUser(user) };
 };
 
-const verifyOtp = async (email, otp) => {
-  const otpRecord = await OTP.findOne({
-    where: {
-      email,
-      otp,
-      expiresAt: { [Op.gt]: new Date() },
-    },
-    order: [["createdAt", "DESC"]],
-  });
+const register = async (email, password) => {
+  const hash = await bcrypt.hash(password, SALT_ROUNDS);
+  const existing = await User.unscoped().findOne({ where: { email } });
 
-  if (!otpRecord) {
-    throw new ApiError(400, "Invalid or expired OTP");
+  if (existing?.passwordHash) {
+    throw new ApiError(409, "Email already registered");
   }
 
-  await OTP.destroy({ where: { email } });
+  if (existing) {
+    await existing.update({ passwordHash: hash });
+    return issueSession(existing);
+  }
 
-  const [user] = await User.findOrCreate({
-    where: { email },
-    defaults: { email, role: "user" },
-  });
-
-  const token = signJwt({ userId: user.id, role: user.role });
-  return { token, user };
+  const user = await User.create({ email, passwordHash: hash, role: "user" });
+  return issueSession(user);
 };
 
-module.exports = { sendOtp, verifyOtp };
+const login = async (email, password) => {
+  const user = await User.unscoped().findOne({ where: { email } });
+  if (!user?.passwordHash) {
+    throw new ApiError(401, "Invalid email or password");
+  }
+  const match = await bcrypt.compare(password, user.passwordHash);
+  if (!match) {
+    throw new ApiError(401, "Invalid email or password");
+  }
+  return issueSession(user);
+};
+
+module.exports = { register, login };
